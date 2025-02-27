@@ -44,6 +44,7 @@ fi
 # Definir permissões para arquivos necessários
 chmod 755 "$TARGET_DIR/server.js"
 chmod +x "$TARGET_DIR/o11v4"
+chmod +x "$TARGET_DIR/run.sh"
 
 # Iniciar o servidor com PM2
 pm2 start "$TARGET_DIR/server.js" --name licserver --silent
