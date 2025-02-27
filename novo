@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# Define target directory
+TARGET_DIR="/home/o11"
+
+# Definir o IP como 127.0.0.1
+SERVER_IP="127.0.0.1"
+
+# Criar diretórios necessários
+mkdir -p "$TARGET_DIR/scripts" "$TARGET_DIR/certs"
+cd "$TARGET_DIR" || { echo "Falha ao acessar $TARGET_DIR"; exit 1; }
+
+# Clonar repositório
+temp_dir=$(mktemp -d)
+if ! git clone https://github.com/Random-Code-Guy/o11v4-Cracked.git "$temp_dir"; then
+    echo "Erro ao clonar o repositório." >&2
+    exit 1
+fi
+
+# Mover arquivos para o diretório de destino
+mv "$temp_dir"/* "$TARGET_DIR"/
+rm -rf "$temp_dir"
+
+# Verificar se Node.js e npm estão instalados
+if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
+    echo "Node.js e npm não encontrados. Instalando..."
+    curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt install -y nodejs
+else
+    echo "Node.js e npm já instalados."
+fi
+
+# Instalar pacotes npm necessários
+npm install -g pm2
+npm install express
+
+# Configurar IP no server.js
+if grep -q "ipAddress" "$TARGET_DIR/server.js"; then
+    sed -i "s/ipAddress *= *.*/ipAddress = '$SERVER_IP';/" "$TARGET_DIR/server.js"
+    echo "IP configurado em server.js como $SERVER_IP."
+else
+    echo "Variável ipAddress não encontrada no server.js." >&2
+fi
+
+# Definir permissões para arquivos necessários
+chmod 755 "$TARGET_DIR/server.js"
+chmod +x "$TARGET_DIR/o11v4"
+
+# Iniciar o servidor com PM2
+pm2 start "$TARGET_DIR/server.js" --name licserver --silent
+
+# Configurar PM2 para iniciar automaticamente
+pm2 startup
+pm2 save
+
+# Executar run.sh em segundo plano se existir
+if [ -x "$TARGET_DIR/run.sh" ]; then
+    nohup "$TARGET_DIR/run.sh" > /dev/null 2>&1 &
+    echo "run.sh iniciado em segundo plano."
+else
+    echo "run.sh não encontrado ou sem permissão de execução." >&2
+fi
+
+echo "Instalação e configuração concluídas com sucesso."
